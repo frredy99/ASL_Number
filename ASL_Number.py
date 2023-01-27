@@ -25,7 +25,7 @@ else:
 model.eval()
 
 # For Video File input:
-path = 0 # Input video path here, 0 for web cam input
+path = 0 # Input video path here
 cap = cv2.VideoCapture(path)
 fps = cap.get(cv2.CAP_PROP_FPS)
 full_frame_num = cap.get(cv2.CAP_PROP_FRAME_COUNT)
@@ -33,16 +33,18 @@ original_height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
 original_width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
 output_height = 720
 output_width = int(output_height*original_width//original_height)
-f = open("./result.txt", 'w') # result txt file
+
+# Define the codec and create VideoWriter Object
+fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+out = cv2.VideoWriter('result.mp4', fourcc, fps, (output_width, output_height))
+# Create result.txt
+f = open("./result.txt", 'w')
 
 if path == 0:
     print("Using web cam")
 
 else:
     print("Using recorded video")
-    # Define the codec and create VideoWriter Object
-    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-    out = cv2.VideoWriter('result.mp4', fourcc, fps, (output_width, output_height))
 
 with mp_hands.Hands(
     max_num_hands=1,
@@ -54,7 +56,7 @@ with mp_hands.Hands(
         success, image = cap.read()
         if not success:
             # If loading a video, use 'break' instead of 'continue'.
-            print("Ignoring empty camera frame.")
+            print(f"\nIgnoring empty camera frame\n")
             break
         
         if not path == 0:
@@ -87,8 +89,8 @@ with mp_hands.Hands(
                         mp_drawing_styles.get_default_hand_connections_style())
             
             # Detects number from extracted landmarks, and writes result on the image
-            # There were some frames that outputs 126 landmarks, causing error
-            # To prevent the error, restrict to only when mediapipe outputs 63 landmarks
+            # There were some frames that outputs 126 landmarks, causing error.
+            # To prevent the error, restrict to only when mediapipe outputs 63 landmarks.
             landmarks = torch.tensor(landmarks)            
             if landmarks.size()[0] == 63:
                 output = model(HandAngle(landmarks))
@@ -105,11 +107,12 @@ with mp_hands.Hands(
         # Save Image Frames to Output Video
         cv2.flip(image, 1)
         if not path == 0:
-            out.write(image)
             cv2.imshow("ASL number", image)
-            f.write(f"Frame : {count}, Time : {count/fps}, Result : {pred}\n")
+            out.write(image)
+            f.write(f"Frame : {count}, Time : {count/fps:.4f}, Result : {pred}\n")
         else:
             cv2.imshow("ASL number", image)
+            out.write(image)
             f.write(f"Frame : {count}, Time : {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')}, Result : {pred}\n")
 
         if cv2.waitKey(5) & 0xFF == ord('e'):
@@ -124,3 +127,6 @@ cv2.destroyAllWindows()
 
 end = time()
 print('time elapsed : ', end - start)
+
+if __name__ == "__main__":
+    print("ASL_Number is running.")
